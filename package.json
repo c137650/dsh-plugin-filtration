@@ -1,0 +1,38 @@
+{
+  "name": "dsh-plugin-filtration",
+  "version": "0.1.0",
+  "description": "Companion filter layer for dsh-plugin-masterprompt: rewrites the final reply through a second model using the same persona and language habits, and clamps Gemini's maxOutputTokens to its supported range.",
+  "type": "module",
+  "main": "lib/index.js",
+  "license": "MIT",
+  "author": "lw-storm",
+  "keywords": [
+    "deepseek",
+    "harness",
+    "dsh",
+    "dsh-plugin",
+    "persona",
+    "filter",
+    "llm-stream"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml"
+  ],
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "dsh-plugin-masterprompt": "*"
+  }
+}
