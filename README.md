@@ -34,6 +34,17 @@ Unable to submit request because it has a maxOutputTokens value of 128000 but th
 
 When the request's provider, adapter or model looks like Gemini and the cap is above the configured limit (default 65536), the request is re-dispatched with the cap lowered. Other providers are untouched.
 
+## Where the model comes from
+
+Two independent things carry the name "model":
+
+- **The model that does the filtering** — `provider` + `model` in `~/.dsh/dsh-plugin-filtration/state.json`. Change it from the panel below, or with `POST /dsh-flt/settings {"provider":"dku0","model":"gemini-3.8-flash"}`.
+- **The models offered in the panel** — enumerated live from DSH itself: `llm.listProviders()` then `llm.listModels(provider)` for each route. Nothing is hard-coded, so every provider and model added to DSH shows up, including ones added later.
+
+## Panel
+
+`conversation.input.left`, next to the access-mode control: a small「过滤」button with a dot showing whether filtering is on. The panel has an on/off switch, a model picker grouped by provider, save, and refresh. It is backed by `GET /dsh-flt/models`.
+
 ## Install
 
 ```bash
@@ -60,15 +71,14 @@ Restart DSH afterwards.
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/dsh-flt/state` | settings, rendered persona size, counters |
+| `GET` | `/dsh-flt/models` | every provider and model DSH knows, for the panel |
 | `GET`/`POST` | `/dsh-flt/settings` | `enabled`, `provider`, `model`, `maxTokens` |
 | `POST` | `/dsh-flt/test` | `{ text }` → original, rewritten, reason |
-
-Settings live in `~/.dsh/dsh-plugin-filtration/state.json`.
 
 ## Notes
 
 - The rewrite costs one extra model round trip per reply, so replies appear later than they would streamed.
-- Turn it off with `POST /dsh-flt/settings {"enabled": false}` — no restart needed.
+- Turn it off from the panel or with `POST /dsh-flt/settings {"enabled": false}` — no restart needed.
 - Failure is always silent: the original text goes through.
 
 ## License
