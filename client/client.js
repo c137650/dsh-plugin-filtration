@@ -42,10 +42,20 @@ window.__ModuleLoader__.load({ id: 'dsh-plugin-filtration', factory: function (r
 
   function FilterBox(props) {
     var open = React.useState(false)
+    var isOpen = open[0]
+    var setOpen = open[1]
     var data = React.useState(null)
+    var info = data[0]
+    var setData = data[1]
     var busy = React.useState(false)
+    var isBusy = busy[0]
+    var setBusy = busy[1]
     var msg = React.useState('')
+    var msgText = msg[0]
+    var setMsg = msg[1]
     var picked = React.useState('')
+    var pickedValue = picked[0]
+    var setPicked = picked[1]
     var wrapRef = React.useRef(null)
 
     function refresh() {
@@ -62,13 +72,13 @@ window.__ModuleLoader__.load({ id: 'dsh-plugin-filtration', factory: function (r
     }
 
     React.useEffect(function () {
-      if (!open[0]) return
+      if (!isOpen) return
       function onDoc(ev) {
         if (wrapRef.current && !wrapRef.current.contains(ev.target)) setOpen(false)
       }
       document.addEventListener('mousedown', onDoc)
       return function () { document.removeEventListener('mousedown', onDoc) }
-    }, [open[0]])
+    }, [isOpen])
 
     function save() {
       var parts = String(picked[0] || '').split('\u0000')
@@ -87,7 +97,7 @@ window.__ModuleLoader__.load({ id: 'dsh-plugin-filtration', factory: function (r
     }
 
     function toggleEnabled() {
-      var s = (data[0] && data[0].settings) || {}
+      var s = (info && info.settings) || {}
       setBusy(true)
       postJson('/dsh-flt/settings', { enabled: !s.enabled }).then(function (body) {
         if (body && body.ok) {
@@ -97,8 +107,8 @@ window.__ModuleLoader__.load({ id: 'dsh-plugin-filtration', factory: function (r
       }).catch(function () {}).then(function () { setBusy(false) })
     }
 
-    var settings = (data[0] && data[0].settings) || {}
-    var providers = (data[0] && data[0].providers) || []
+    var settings = (info && info.settings) || {}
+    var providers = (info && info.providers) || []
     var label = settings.model ? settings.model : '未选'
 
     var options = []
@@ -111,36 +121,36 @@ window.__ModuleLoader__.load({ id: 'dsh-plugin-filtration', factory: function (r
         })))
     })
 
-    var panel = open[0] ? React.createElement('div', { className: 'dshflt-panel' },
+    var panel = isOpen ? React.createElement('div', { className: 'dshflt-panel' },
       React.createElement('div', { className: 'dshflt-head' },
         React.createElement('span', null, '成稿过滤'),
         React.createElement('button', { className: 'dshflt-close', onClick: function () { setOpen(false) } }, '\u00d7')),
       React.createElement('div', { className: 'dshflt-body' },
         React.createElement('div', { className: 'dshflt-row' },
           React.createElement('label', null, '启用'),
-          React.createElement('button', { className: 'dshflt-mini' + (settings.enabled ? ' primary' : ''), disabled: busy[0], onClick: toggleEnabled },
+          React.createElement('button', { className: 'dshflt-mini' + (settings.enabled ? ' primary' : ''), disabled: isBusy, onClick: toggleEnabled },
             settings.enabled ? '开' : '关')),
         React.createElement('div', { className: 'dshflt-row' },
           React.createElement('label', null, '用哪个模型')),
         React.createElement('select', {
           className: 'dshflt-select',
-          value: picked[0],
+          value: pickedValue,
           onChange: function (e) { setPicked(e.target.value) },
         },
           React.createElement('option', { value: '' }, options.length ? '选一个模型' : '没有可用模型'),
           options),
         React.createElement('div', { className: 'dshflt-row' },
-          React.createElement('button', { className: 'dshflt-mini primary', disabled: busy[0], onClick: save }, '保存'),
-          React.createElement('button', { className: 'dshflt-mini', disabled: busy[0], onClick: refresh }, '刷新')),
+          React.createElement('button', { className: 'dshflt-mini primary', disabled: isBusy, onClick: save }, '保存'),
+          React.createElement('button', { className: 'dshflt-mini', disabled: isBusy, onClick: refresh }, '刷新')),
         React.createElement('div', { className: 'dshflt-status' },
           '当前：' + (settings.provider || '?') + ' / ' + label),
-        React.createElement('div', { className: 'dshflt-msg' }, msg[0]))) : null
+        React.createElement('div', { className: 'dshflt-msg' }, msgText))) : null
 
     return React.createElement('div', { className: 'dshflt-root', ref: wrapRef },
       React.createElement('button', {
         className: 'dshflt-btn',
         title: '选择成稿过滤用的模型',
-        onClick: function () { setOpen(!open[0]); if (!open[0]) refresh() },
+        onClick: function () { setOpen(!isOpen); if (!isOpen) refresh() },
       },
         React.createElement('span', { className: 'dshflt-dot' + (settings.enabled ? ' on' : '') }),
         '过滤 · ' + label),
