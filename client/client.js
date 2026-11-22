@@ -71,6 +71,9 @@ window.__ModuleLoader__.load({ id: 'dsh-plugin-filtration', factory: function (r
       }).then(function () { setBusy(false) })
     }
 
+    // 一挂上就读一次,不然按钮上永远显示「未选」——它要等面板打开才去拿状态。
+    React.useEffect(function () { refresh() }, [])
+
     React.useEffect(function () {
       if (!isOpen) return
       function onDoc(ev) {
