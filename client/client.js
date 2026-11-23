@@ -65,7 +65,12 @@ window.__ModuleLoader__.load({ id: 'dsh-plugin-filtration', factory: function (r
         if (!body || !body.ok) { setMsg('读取失败'); return }
         setData(body)
         var s = body.settings || {}
-        setPicked((s.provider || '') + '\u0000' + (s.model || ''))
+        var all = []
+        ;(body.providers || []).forEach(function (p) {
+          ;(p.models || []).forEach(function (m) { all.push(p.provider + '/' + m.id) })
+        })
+        var hit = all.indexOf((s.provider || '') + '/' + (s.model || ''))
+        setPicked(hit >= 0 ? String(hit) : '')
       }).catch(function (e) {
         setMsg(String(e && e.message ? e.message : e))
       }).then(function () { setBusy(false) })
@@ -84,10 +89,13 @@ window.__ModuleLoader__.load({ id: 'dsh-plugin-filtration', factory: function (r
     }, [isOpen])
 
     function save() {
-      var parts = String(picked[0] || '').split('\u0000')
-      if (!parts[0] || !parts[1]) { setMsg('先选一个模型'); return }
+      var idx = String(pickedValue || '')
+      if (idx === '') { setMsg('先选一个模型'); return }
+      var target = null
+      flat.forEach(function (item, i) { if (String(i) === idx) target = item })
+      if (!target) { setMsg('选中的项没有对上,刷新一下'); return }
       setBusy(true)
-      postJson('/dsh-flt/settings', { provider: parts[0], model: parts[1] }).then(function (body) {
+      postJson('/dsh-flt/settings', { provider: target.provider, model: target.model }).then(function (body) {
         if (body && body.ok) {
           setData(function (prev) { return prev ? Object.assign({}, prev, { settings: body.settings }) : prev })
           setMsg('已保存')
@@ -114,14 +122,23 @@ window.__ModuleLoader__.load({ id: 'dsh-plugin-filtration', factory: function (r
     var providers = (info && info.providers) || []
     var label = settings.model ? settings.model : '未选'
 
+    var flat = []
+    providers.forEach(function (p) {
+      (p.models || []).forEach(function (m) {
+        flat.push({ provider: p.provider, model: m.id, label: m.label || m.id })
+      })
+    })
+
     var options = []
+    var cursor = 0
     providers.forEach(function (p) {
       if (!p.models || !p.models.length) return
-      options.push(React.createElement('optgroup', { key: 'g-' + p.provider, label: p.label + ' (' + p.provider + ')' },
-        p.models.map(function (m) {
-          return React.createElement('option', { key: p.provider + '/' + m.id, value: p.provider + '\u0000' + m.id },
-            m.label || m.id)
-        })))
+      var group = p.models.map(function (m) {
+        var el = React.createElement('option', { key: p.provider + '/' + m.id, value: String(cursor) }, m.label || m.id)
+        cursor += 1
+        return el
+      })
+      options.push(React.createElement('optgroup', { key: 'g-' + p.provider, label: p.label + ' (' + p.provider + ')' }, group))
     })
 
     var panel = isOpen ? React.createElement('div', { className: 'dshflt-panel' },
