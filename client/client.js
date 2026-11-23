@@ -1,13 +1,13 @@
 // dsh-plugin-filtration — client bundle (hand-written ModuleLoader form, no
-// bundler needed). Renders the「过滤」box in the composer tool row and the panel
-// that picks which model the filter layer uses. Talks to the host through the
-// /dsh-flt/* routes.
+// bundler needed). Renders the「过滤」box in the composer tool row. The panel
+// lists every model DSH knows; clicking one switches to it immediately.
+// Talks to the host through the /dsh-flt/* routes.
 window.__ModuleLoader__.load({ id: 'dsh-plugin-filtration', factory: function (require) {
   var module = { exports: {} }
   var exports = module.exports
   var React = require('react')
 
-  var BUILD = '1123a'
+  var BUILD = 'b1124'
 
   var CSS = [
     '.dshflt-root { position: relative; display: inline-flex; align-items: center; }',
@@ -15,15 +15,16 @@ window.__ModuleLoader__.load({ id: 'dsh-plugin-filtration', factory: function (r
     '.dshflt-btn:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.14)); }',
     '.dshflt-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dsw-alias-label-tertiary, rgba(128,128,128,.6)); }',
     '.dshflt-dot.on { background: var(--dsw-alias-state-success-primary, #3da95c); }',
-    '.dshflt-panel { position: absolute; z-index: 1000; left: 0; bottom: calc(100% + 10px); width: 360px; max-height: 72vh; overflow: auto; border: 1px solid var(--dsw-alias-border-l2, rgba(128,128,128,.4)); border-radius: 10px; background: var(--dsw-alias-bg-overlay, #ffffff); color: var(--dsw-alias-label-primary, #1a1a1a); box-shadow: 0 10px 32px rgba(0,0,0,.25); font-size: 12.5px; }',
+    '.dshflt-panel { position: absolute; z-index: 1000; left: 0; bottom: calc(100% + 10px); width: 380px; max-height: 72vh; overflow: auto; border: 1px solid var(--dsw-alias-border-l2, rgba(128,128,128,.4)); border-radius: 10px; background: var(--dsw-alias-bg-overlay, #ffffff); color: var(--dsw-alias-label-primary, #1a1a1a); box-shadow: 0 10px 32px rgba(0,0,0,.25); font-size: 12.5px; }',
     '.dshflt-head { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(128,128,128,.25)); font-weight: 600; }',
     '.dshflt-close { border: none; background: transparent; color: inherit; cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 6px; }',
     '.dshflt-close:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.18)); }',
-    '.dshflt-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 9px; }',
+    '.dshflt-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }',
     '.dshflt-status { color: var(--dsw-alias-label-secondary, inherit); line-height: 1.5; }',
-    '.dshflt-row { display: flex; align-items: center; gap: 6px; }',
-    '.dshflt-row label { flex: 1; }',
-    '.dshflt-select { width: 100%; padding: 5px 6px; border-radius: 8px; border: 1px solid var(--dsw-alias-border-l2, rgba(128,128,128,.45)); background: transparent; color: inherit; font-size: 12.5px; }',
+    '.dshflt-group { font-size: 11.5px; color: var(--dsw-alias-label-tertiary, rgba(128,128,128,.85)); margin-top: 4px; }',
+    '.dshflt-row { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l1, rgba(128,128,128,.25)); border-radius: 8px; }',
+    '.dshflt-row.active { border-color: var(--dsw-alias-brand-primary, rgba(64,160,255,.65)); background: var(--dsw-alias-interactive-bg-active, rgba(64,128,255,.10)); }',
+    '.dshflt-row .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }',
     '.dshflt-mini { padding: 3px 8px; border-radius: 6px; border: 1px solid var(--dsw-alias-border-l2, rgba(128,128,128,.45)); background: transparent; color: inherit; cursor: pointer; font-size: 11.5px; }',
     '.dshflt-mini.primary { background: var(--dsw-alias-button-primary-fill, rgba(64,128,255,.16)); border-color: var(--dsw-alias-brand-primary, rgba(64,128,255,.6)); }',
     '.dshflt-mini:disabled { opacity: .45; cursor: default; }',
@@ -42,48 +43,39 @@ window.__ModuleLoader__.load({ id: 'dsh-plugin-filtration', factory: function (r
     }).then(function (r) { return r.json() })
   }
 
-  function FilterBox(props) {
-    var open = React.useState(false)
-    var isOpen = open[0]
-    var setOpen = open[1]
-    var data = React.useState(null)
-    var info = data[0]
-    var setData = data[1]
-    var busy = React.useState(false)
-    var isBusy = busy[0]
-    var setBusy = busy[1]
-    var msg = React.useState('')
-    var msgText = msg[0]
-    var setMsg = msg[1]
-    var picked = React.useState('')
-    var pickedValue = picked[0]
-    var setPicked = picked[1]
-    var truth = React.useState('')
-    var truthText = truth[0]
-    var setTruth = truth[1]
+  function FilterBox() {
+    var openState = React.useState(false)
+    var isOpen = openState[0]
+    var setOpen = openState[1]
+
+    var dataState = React.useState(null)
+    var info = dataState[0]
+    var setData = dataState[1]
+
+    var busyState = React.useState(false)
+    var isBusy = busyState[0]
+    var setBusy = busyState[1]
+
+    var msgState = React.useState('')
+    var msgText = msgState[0]
+    var setMsg = msgState[1]
+
     var wrapRef = React.useRef(null)
 
-    function refresh() {
+    var settings = (info && info.settings) || {}
+    var providers = (info && info.providers) || []
+
+    function load() {
       setBusy(true)
-      setMsg('')
       getJson('/dsh-flt/models').then(function (body) {
-        if (!body || !body.ok) { setMsg('读取失败'); return }
-        setData(body)
-        var s = body.settings || {}
-        var all = []
-        ;(body.providers || []).forEach(function (p) {
-          ;(p.models || []).forEach(function (m) { all.push(p.provider + '/' + m.id) })
-        })
-        setTruth((s.provider || '?') + ' / ' + (s.model || '?'))
-        var hit = all.indexOf((s.provider || '') + '/' + (s.model || ''))
-        setPicked(hit >= 0 ? String(hit) : '')
+        if (body && body.ok) setData(body)
+        else setMsg('读取失败')
       }).catch(function (e) {
-        setMsg(String(e && e.message ? e.message : e))
+        setMsg(String((e && e.message) || e))
       }).then(function () { setBusy(false) })
     }
 
-    // 一挂上就读一次,不然按钮上永远显示「未选」——它要等面板打开才去拿状态。
-    React.useEffect(function () { refresh() }, [])
+    React.useEffect(function () { load() }, [])
 
     React.useEffect(function () {
       if (!isOpen) return
@@ -94,99 +86,83 @@ window.__ModuleLoader__.load({ id: 'dsh-plugin-filtration', factory: function (r
       return function () { document.removeEventListener('mousedown', onDoc) }
     }, [isOpen])
 
-    function save() {
-      var idx = String(pickedValue || '')
-      if (idx === '') { setMsg('先选一个模型'); return }
-      var target = null
-      flat.forEach(function (item, i) { if (String(i) === idx) target = item })
-      if (!target) { setMsg('选中的项没有对上,刷新一下'); return }
+    // 点一行就切换,没有「先选再保存」这一层。
+    function pick(provider, model) {
       setBusy(true)
-      postJson('/dsh-flt/settings', { provider: target.provider, model: target.model }).then(function (body) {
-        if (body && body.ok) {
-          setData(function (prev) { return prev ? Object.assign({}, prev, { settings: body.settings }) : prev })
-          setMsg('已保存，等服务器回话……')
-          return getJson('/dsh-flt/state').then(function (st) {
-            var real = (st && st.settings) || {}
-            setTruth((real.provider || '?') + ' / ' + (real.model || '?'))
-            if (real.provider === target.provider && real.model === target.model) {
-              setMsg('已保存。服务器现在是 ' + real.provider + ' / ' + real.model)
-            } else {
-              setMsg('保存被服务器丢掉了，服务器还是 ' + real.provider + ' / ' + real.model)
-            }
-          })
+      setMsg('切换中……')
+      postJson('/dsh-flt/settings', { provider: provider, model: model }).then(function (body) {
+        if (!body || !body.ok) {
+          setMsg('切换失败')
+          return
         }
-        setMsg(body && body.ok ? '' : '保存失败')
+        return getJson('/dsh-flt/state').then(function (st) {
+          var real = (st && st.settings) || {}
+          setData(function (prev) {
+            if (!prev) return prev
+            return Object.assign({}, prev, { settings: real })
+          })
+          if (real.provider === provider && real.model === model) setMsg('已切到 ' + provider + ' / ' + model)
+          else setMsg('服务器没接受,还是 ' + real.provider + ' / ' + real.model)
+        })
       }).catch(function (e) {
-        setMsg(String(e && e.message ? e.message : e))
+        setMsg(String((e && e.message) || e))
       }).then(function () { setBusy(false) })
     }
 
     function toggleEnabled() {
-      var s = (info && info.settings) || {}
+      var next = !settings.enabled
       setBusy(true)
-      postJson('/dsh-flt/settings', { enabled: !s.enabled }).then(function (body) {
+      postJson('/dsh-flt/settings', { enabled: next }).then(function (body) {
         if (body && body.ok) {
           setData(function (prev) { return prev ? Object.assign({}, prev, { settings: body.settings }) : prev })
-          setMsg(body.settings.enabled ? '已开启' : '已关闭')
+          setMsg(next ? '已开启' : '已关闭')
         }
       }).catch(function () {}).then(function () { setBusy(false) })
     }
 
-    var settings = (info && info.settings) || {}
-    var providers = (info && info.providers) || []
-    var label = settings.model ? settings.model : '未选'
-
-    var flat = []
-    providers.forEach(function (p) {
-      (p.models || []).forEach(function (m) {
-        flat.push({ provider: p.provider, model: m.id, label: m.label || m.id })
-      })
-    })
-
-    var options = []
-    var cursor = 0
+    var label = settings.model || '未选'
+    var rows = []
     providers.forEach(function (p) {
       if (!p.models || !p.models.length) return
-      var group = p.models.map(function (m) {
-        var el = React.createElement('option', { key: p.provider + '/' + m.id, value: String(cursor) }, m.label || m.id)
-        cursor += 1
-        return el
+      rows.push(React.createElement('div', { key: 'h-' + p.provider, className: 'dshflt-group' }, p.label + ' (' + p.provider + ')'))
+      p.models.forEach(function (m) {
+        var active = settings.provider === p.provider && settings.model === m.id
+        rows.push(React.createElement('div', { key: p.provider + '/' + m.id, className: 'dshflt-row' + (active ? ' active' : '') },
+          React.createElement('span', { className: 'name' }, m.label || m.id),
+          React.createElement('button', {
+            className: 'dshflt-mini' + (active ? '' : ' primary'),
+            disabled: isBusy || active,
+            onClick: function () { pick(p.provider, m.id) },
+          }, active ? '当前' : '用这个')))
       })
-      options.push(React.createElement('optgroup', { key: 'g-' + p.provider, label: p.label + ' (' + p.provider + ')' }, group))
     })
 
     var panel = isOpen ? React.createElement('div', { className: 'dshflt-panel' },
       React.createElement('div', { className: 'dshflt-head' },
-        React.createElement('span', null, '成稿过滤'),
+        React.createElement('span', null, '成稿过滤 · ' + BUILD),
         React.createElement('button', { className: 'dshflt-close', onClick: function () { setOpen(false) } }, '\u00d7')),
       React.createElement('div', { className: 'dshflt-body' },
         React.createElement('div', { className: 'dshflt-row' },
-          React.createElement('label', null, '启用'),
+          React.createElement('span', { className: 'name' }, '启用'),
           React.createElement('button', { className: 'dshflt-mini' + (settings.enabled ? ' primary' : ''), disabled: isBusy, onClick: toggleEnabled },
             settings.enabled ? '开' : '关')),
+        settings.model
+          ? React.createElement('div', { className: 'dshflt-status' }, '当前：' + settings.provider + ' / ' + settings.model)
+          : React.createElement('div', { className: 'dshflt-status' }, '当前：未选'),
+        rows.length ? rows : React.createElement('div', { className: 'dshflt-status' }, '没读到模型列表，点刷新'),
         React.createElement('div', { className: 'dshflt-row' },
-          React.createElement('label', null, '用哪个模型')),
-        React.createElement('select', {
-          className: 'dshflt-select',
-          value: pickedValue,
-          onChange: function (e) { setPicked(e.target.value) },
-        },
-          React.createElement('option', { value: '' }, options.length ? '选一个模型' : '没有可用模型'),
-          options),
-        React.createElement('div', { className: 'dshflt-row' },
-          React.createElement('button', { className: 'dshflt-mini primary', disabled: isBusy, onClick: save }, '保存'),
-          React.createElement('button', { className: 'dshflt-mini', disabled: isBusy, onClick: refresh }, '刷新')),
-        React.createElement('div', { className: 'dshflt-status' },
-          '面板：' + (settings.provider || '?') + ' / ' + label),
-        React.createElement('div', { className: 'dshflt-status' },
-          '服务器：' + (truthText || '（还没读）') + '　build ' + BUILD),
-        React.createElement('div', { className: 'dshflt-msg' }, msgText))) : null
+          React.createElement('button', { className: 'dshflt-mini', disabled: isBusy, onClick: load }, '刷新')),
+        React.createElement('div', { className: 'dshflt-msg' }, msgText)))
+      : null
 
     return React.createElement('div', { className: 'dshflt-root', ref: wrapRef },
       React.createElement('button', {
         className: 'dshflt-btn',
-        title: '选择成稿过滤用的模型（build ' + BUILD + '）',
-        onClick: function () { setOpen(!isOpen); if (!isOpen) refresh() },
+        title: '成稿过滤（' + BUILD + '）',
+        onClick: function () {
+          setOpen(!isOpen)
+          if (!isOpen) load()
+        },
       },
         React.createElement('span', { className: 'dshflt-dot' + (settings.enabled ? ' on' : '') }),
         '过滤 · ' + label),
@@ -207,8 +183,8 @@ window.__ModuleLoader__.load({ id: 'dsh-plugin-filtration', factory: function (r
     ctx.slots.inject('conversation.input.left', function () {
       return ctx.slots.register(
         { name: 'conversation.input.left', id: 'filtration-model', order: 6, label: '过滤' },
-        function (props) {
-          return React.createElement(FilterBox, { sessionId: props.sessionId })
+        function () {
+          return React.createElement(FilterBox, null)
         })
     })
   }
