@@ -7,6 +7,8 @@ window.__ModuleLoader__.load({ id: 'dsh-plugin-filtration', factory: function (r
   var exports = module.exports
   var React = require('react')
 
+  var BUILD = '1123a'
+
   var CSS = [
     '.dshflt-root { position: relative; display: inline-flex; align-items: center; }',
     '.dshflt-btn { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 9px; border-radius: 12px; border: 1px solid var(--dsw-alias-border-l2, rgba(128,128,128,.45)); background: transparent; color: var(--dsw-alias-label-primary, inherit); font-size: 12px; cursor: pointer; line-height: 1; }',
@@ -56,6 +58,9 @@ window.__ModuleLoader__.load({ id: 'dsh-plugin-filtration', factory: function (r
     var picked = React.useState('')
     var pickedValue = picked[0]
     var setPicked = picked[1]
+    var truth = React.useState('')
+    var truthText = truth[0]
+    var setTruth = truth[1]
     var wrapRef = React.useRef(null)
 
     function refresh() {
@@ -69,6 +74,7 @@ window.__ModuleLoader__.load({ id: 'dsh-plugin-filtration', factory: function (r
         ;(body.providers || []).forEach(function (p) {
           ;(p.models || []).forEach(function (m) { all.push(p.provider + '/' + m.id) })
         })
+        setTruth((s.provider || '?') + ' / ' + (s.model || '?'))
         var hit = all.indexOf((s.provider || '') + '/' + (s.model || ''))
         setPicked(hit >= 0 ? String(hit) : '')
       }).catch(function (e) {
@@ -98,10 +104,18 @@ window.__ModuleLoader__.load({ id: 'dsh-plugin-filtration', factory: function (r
       postJson('/dsh-flt/settings', { provider: target.provider, model: target.model }).then(function (body) {
         if (body && body.ok) {
           setData(function (prev) { return prev ? Object.assign({}, prev, { settings: body.settings }) : prev })
-          setMsg('已保存')
-        } else {
-          setMsg('保存失败')
+          setMsg('已保存，等服务器回话……')
+          return getJson('/dsh-flt/state').then(function (st) {
+            var real = (st && st.settings) || {}
+            setTruth((real.provider || '?') + ' / ' + (real.model || '?'))
+            if (real.provider === target.provider && real.model === target.model) {
+              setMsg('已保存。服务器现在是 ' + real.provider + ' / ' + real.model)
+            } else {
+              setMsg('保存被服务器丢掉了，服务器还是 ' + real.provider + ' / ' + real.model)
+            }
+          })
         }
+        setMsg(body && body.ok ? '' : '保存失败')
       }).catch(function (e) {
         setMsg(String(e && e.message ? e.message : e))
       }).then(function () { setBusy(false) })
@@ -163,13 +177,15 @@ window.__ModuleLoader__.load({ id: 'dsh-plugin-filtration', factory: function (r
           React.createElement('button', { className: 'dshflt-mini primary', disabled: isBusy, onClick: save }, '保存'),
           React.createElement('button', { className: 'dshflt-mini', disabled: isBusy, onClick: refresh }, '刷新')),
         React.createElement('div', { className: 'dshflt-status' },
-          '当前：' + (settings.provider || '?') + ' / ' + label),
+          '面板：' + (settings.provider || '?') + ' / ' + label),
+        React.createElement('div', { className: 'dshflt-status' },
+          '服务器：' + (truthText || '（还没读）') + '　build ' + BUILD),
         React.createElement('div', { className: 'dshflt-msg' }, msgText))) : null
 
     return React.createElement('div', { className: 'dshflt-root', ref: wrapRef },
       React.createElement('button', {
         className: 'dshflt-btn',
-        title: '选择成稿过滤用的模型',
+        title: '选择成稿过滤用的模型（build ' + BUILD + '）',
         onClick: function () { setOpen(!isOpen); if (!isOpen) refresh() },
       },
         React.createElement('span', { className: 'dshflt-dot' + (settings.enabled ? ' on' : '') }),
